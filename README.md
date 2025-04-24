@@ -39,3 +39,65 @@ https://proj.org/en/stable/usage/environmentvars.html#envvar-PROJ_AUX_DB
 The db produced in this repo will define an "authority", `NSRS` (but it may change).
 That will produce the CRS `NSRS:NATRF2022_2D` as something similar to `EPSG:6318`.
 Yes, the ID can use letters in PROJ (not in EPSG).
+
+## Examples
+
+```
+PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db projinfo NSRS:NATRF2022_2D
+PROJ.4 string:
++proj=longlat +ellps=GRS80 +no_defs +type=crs
+
+WKT2:2019 string:
+GEOGCRS["NATRF2022",
+    DYNAMIC[
+        FRAMEEPOCH[2020]],
+    DATUM["North American Terrestrial Reference Frame 2022",
+        ELLIPSOID["GRS 1980",6378137,298.257222101,
+            LENGTHUNIT["metre",1]]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    USAGE[
+        SCOPE["Not known."],
+        AREA["World."],
+        BBOX[-90,-180,90,180]],
+    ID["NSRS","NATRF2022_2D"],
+    REMARK["NATRF2022"]]
+```
+
+```
+PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db projinfo NSRS:GULF -o WKT1_GDAL -q
+PROJCS["NATRF2022 / Gulf",
+    GEOGCS["NATRF2022",
+        DATUM["North American Terrestrial Reference Frame 2022",
+            SPHEROID["GRS 1980",6378137,298.257222101,
+                AUTHORITY["EPSG","7019"]],
+            AUTHORITY["NSRS","NATRF2022_datum"]],
+        PRIMEM["Greenwich",0,
+            AUTHORITY["EPSG","8901"]],
+        UNIT["degree",0.0174532925199433,
+            AUTHORITY["EPSG","9122"]],
+        AUTHORITY["NSRS","NATRF2022_2D"]],
+    PROJECTION["Lambert_Conformal_Conic_1SP"],
+    PARAMETER["latitude_of_origin",27.75],
+    PARAMETER["central_meridian",-90],
+    PARAMETER["scale_factor",0.9996],
+    PARAMETER["false_easting",1524000],
+    PARAMETER["false_northing",457200],
+    UNIT["metre",1,
+        AUTHORITY["EPSG","9001"]],
+    AXIS["Easting",EAST],
+    AXIS["Northing",NORTH],
+    AUTHORITY["NSRS","GULF"]]
+```
+
+```
+echo 50 -70 0 2030 | PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D ITRF2020 -d 9
+50.000000565	-70.000002398 0.000208146 2030
+```
