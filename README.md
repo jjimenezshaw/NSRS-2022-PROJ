@@ -1,12 +1,14 @@
 # NSRS-2022-PROJ
 Auxiliary DB for PROJ with alpha and beta data from NATRF2022 and friends.
 
+
 ## Modernized National Spatial Reference System
 USA, Canada and Mexico are modernizing their spatial reference systems.
 For more information, go to their webpages.
 [PROJ](https://proj.org) will include that information once it is published by the [EPSG](https://epsg.org).
 In the mean time this auxiliary database can be useful to test some of the funcionalities.
 See that anything that needs a change in PROJ's source code cannot be tested until that feature is developed.
+
 
 ## Scope
 This repository tries to create an auxiliary database (complementary to `proj.db`) that includes some (all?) of the reference systems and transformations from the "Modernized National Spatial Reference System", also known as `NATRF2022` (among others).
@@ -29,8 +31,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
+
 ## Source
 Data was obtained from https://alpha.ngs.noaa.gov/
+
 
 ## Auxiliary database
 You can use the environment variable `PROJ_AUX_DB` to specify an auxiliary database to PROJ:
@@ -39,6 +43,17 @@ https://proj.org/en/stable/usage/environmentvars.html#envvar-PROJ_AUX_DB
 The db produced in this repo will define an "authority", `NSRS` (but it may change).
 That will produce the CRS `NSRS:NATRF2022_2D` as something similar to `EPSG:6318`.
 Yes, the ID can use letters in PROJ (not in EPSG).
+
+
+## What is included
+I hope I keep this list updated:
+ - Geographic CRSs for `{N,P,C,M}ATRF2022` in the 3 flavours: geocentric, geographic 3D and 2D.
+ - Vertical system `NAPGD2022 height` (so far only in meters).
+ - Transformations from `ITRF2020` to `{N,P,C,M}ATRF2022` using a Helmert transformation with the `EPP`.
+ - `SGEOID2022 North America` as GeoTIFF. It is stored as `int16` to make is smaller than 100MB. The max error is 1.1 mm. (no velocities included!)
+ - Transformation from `ITRF2020` to `NAPGD2022 height` using that geoid model and linear interpolation.
+ - All state planes from `SPCS2022` in meters and international feet.
+
 
 ## Examples
 
@@ -100,4 +115,9 @@ PROJCS["NATRF2022 / Gulf",
 ```
 echo 50 -70 0 2030 | PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D ITRF2020 -d 9
 50.000000565	-70.000002398 0.000208146 2030
+```
+
+```
+echo 50 -70 0 | PROJ_DATA=`projinfo --searchpaths | sed -zE 's/[\r\n]+/:/g'`:./NSRS-2022-PROJ/ PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D+NAPGD2022 NSRS:NATRF2022_3D -d 9
+50.000000000	-70.000000000 -26.198699954
 ```

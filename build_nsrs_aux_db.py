@@ -89,6 +89,63 @@ INSERT INTO geodetic_crs VALUES(
             str += crs + usage(id, 'geodetic_crs')
     return str
 
+
+def create_vertical_datum():
+    id = 'NAPGD2022_datum'
+    datum = f"""
+INSERT INTO vertical_datum VALUES(
+    '{AUTHORITY}','{id}',          -- code
+    'North American-Pacific Geodetic Datum 2022',  -- name
+    NULL,    -- description
+    '{PUBLICATION_DATE}',   -- publication date
+    2020.0,  -- frame reference epoch
+    NULL,    -- ensemble accuracy
+    NULL,    -- anchor
+    NULL,    -- anchor epoch
+    0);"""
+    return datum + usage(id, 'vertical_datum')
+
+
+def create_vertical_crss():
+    id = 'NAPGD2022'
+    crs = f"""
+INSERT INTO vertical_crs VALUES(
+    '{AUTHORITY}','{id}',  -- code
+    '{id} height',  -- name
+    NULL,    -- description
+    'EPSG', '6499',
+    '{AUTHORITY}','{id}_datum', -- datum
+    0);"""
+    return crs + usage(id, 'vertical_crs')
+
+
+def create_vertical_transformations():
+    id = 'ITRF2020_to_NAPGD2022'
+    in_file = 'GEOID2022.v1.a.ggxf'
+    out_file = 'us_noaa_sgeoid2022_na_v1a.tif'
+    # that trigger checks the existence of some things... that are in proj.db but not here.
+    # so far we just delete the trigger.
+    delete_trigger = """
+DROP TRIGGER grid_transformation_insert_trigger;"""
+    str = f"""
+INSERT INTO grid_transformation VALUES(
+    '{AUTHORITY}','{id}','ITRF2020 to NAPGD2022 height',NULL,
+    'EPSG','9665','Geographic3D to GravityRelatedHeight (gtx)',
+    'EPSG','9989', -- source CRS (ITRF2020)
+    '{AUTHORITY}','NAPGD2022', -- target CRS (NAPGD2022 height)
+    NULL,  -- accuracy
+    'EPSG','8666','Geoid (height correction) model file','GEOID2022.v1.a.ggxf',
+    NULL,NULL,NULL,NULL,
+    NULL,NULL,NULL,0);"""
+
+    alternative = f"""
+INSERT INTO grid_alternatives VALUES(
+    '{in_file}','{out_file}',NULL,'GTiff','geoid_like',0,NULL,'https://cdn.proj.org/{out_file}',1,1,NULL);
+"""
+
+    return delete_trigger + str + usage(id, 'grid_transformation') + alternative
+
+
 def create_itrf2020_transformations():
     epps = {
         "NA": (0.051, -0.736, -0.024),
@@ -232,6 +289,9 @@ def create_spcss():
 str = "" #f"INSERT INTO builtin_authorities VALUES ('{NSRS_AUTHORITY}');"
 str += create_geodetic_datums()
 str += create_geodetic_crss()
+str += create_vertical_datum()
+str += create_vertical_crss()
+str += create_vertical_transformations()
 str += create_spcss()
 str += create_itrf2020_transformations()
 
