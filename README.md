@@ -48,7 +48,7 @@ Yes, the ID can use letters in PROJ (not in EPSG).
 ## What is included
 I hope I keep this list updated:
  - Geographic CRSs for `{N,P,C,M}ATRF2022` in the 3 flavours: geocentric, geographic 3D and 2D.
- - Vertical system `NAPGD2022 height` (so far only in meters).
+ - Vertical systems `NAPGD2022 height` and `NAPGD2022 height (ft)`.
  - Transformations from `ITRF2020` to `{N,P,C,M}ATRF2022` using a Helmert transformation with the `EPP`.
  - `SGEOID2022 North America` as GeoTIFF. It is stored as `int16` to make is smaller than 100MB. The max error is 1.1 mm. (no velocities included!)
  - Transformation from `ITRF2020` to `NAPGD2022 height` using that geoid model and linear interpolation.
@@ -57,6 +57,8 @@ I hope I keep this list updated:
 
 ## Examples
 
+
+projinfo:
 ```
 PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db projinfo NSRS:NATRF2022_2D
 PROJ.4 string:
@@ -86,6 +88,7 @@ GEOGCRS["NATRF2022",
     REMARK["NATRF2022"]]
 ```
 
+Show WKT of a State Plane:
 ```
 PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db projinfo NSRS:GULF -o WKT1_GDAL -q
 PROJCS["NATRF2022 / Gulf",
@@ -112,12 +115,20 @@ PROJCS["NATRF2022 / Gulf",
     AUTHORITY["NSRS","GULF"]]
 ```
 
+Transform from ITRF2020 with a different epoch:
 ```
 echo 50 -70 0 2030 | PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D ITRF2020 -d 9
 50.000000565	-70.000002398 0.000208146 2030
 ```
 
+Use geoid model locally:
 ```
 echo 50 -70 0 | PROJ_DATA=`projinfo --searchpaths | sed -zE 's/[\r\n]+/:/g'`:./NSRS-2022-PROJ/ PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D+NAPGD2022 NSRS:NATRF2022_3D -d 9
+50.000000000	-70.000000000 -26.198699954
+```
+
+Use geoid model via NETWORK (there is an issue that forces the usage of PROJ_NETWORK_ENDPOINT):
+```
+echo 50 -70 0 | PROJ_NETWORK_ENDPOINT=https://jjimenezshaw.github.io/NSRS-2022-PROJ/ PROJ_NETWORK=ON PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D+NAPGD2022 NSRS:NATRF2022_3D -d 9
 50.000000000	-70.000000000 -26.198699954
 ```

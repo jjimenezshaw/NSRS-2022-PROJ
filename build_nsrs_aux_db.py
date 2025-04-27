@@ -65,7 +65,7 @@ INSERT INTO geodetic_datum VALUES(
     NULL,    -- anchor
     NULL,    -- anchor epoch
     0);"""
-        str += datum + usage(f'{id}', 'geodetic_datum')
+        str += datum + usage(id, 'geodetic_datum')
     return str
 
 
@@ -107,17 +107,31 @@ INSERT INTO vertical_datum VALUES(
 
 
 def create_vertical_crss():
+    # vertical in m
     id = 'NAPGD2022'
     crs = f"""
 INSERT INTO vertical_crs VALUES(
-    '{AUTHORITY}','{id}',  -- code
-    '{id} height',  -- name
-    NULL,    -- description
-    'EPSG', '6499',
-    '{AUTHORITY}','{id}_datum', -- datum
+    '{AUTHORITY}','{id}',            -- code
+    'NAPGD2022 height',              -- name
+    NULL,                            -- description
+    'EPSG', '6499',                  -- vertical m
+    '{AUTHORITY}','NAPGD2022_datum', -- datum
     0);"""
-    return crs + usage(id, 'vertical_crs')
+    str = crs + usage(id, 'vertical_crs')
 
+    # vertical in ft
+    id = 'NAPGD2022_ft'
+    crs = f"""
+INSERT INTO vertical_crs VALUES(
+    '{AUTHORITY}','{id}',            -- code
+    'NAPGD2022 height (ft)',         -- name
+    NULL,                            -- description
+    'EPSG', '1030',                  -- vertical ft
+    '{AUTHORITY}','NAPGD2022_datum', -- datum
+    0);"""
+    str += crs + usage(id, 'vertical_crs')
+
+    return str
 
 def create_vertical_transformations():
     id = 'ITRF2020_to_NAPGD2022'
@@ -140,7 +154,7 @@ INSERT INTO grid_transformation VALUES(
 
     alternative = f"""
 INSERT INTO grid_alternatives VALUES(
-    '{in_file}','{out_file}',NULL,'GTiff','geoid_like',0,NULL,'https://cdn.proj.org/{out_file}',1,1,NULL);
+    '{in_file}','{out_file}',NULL,'GTiff','geoid_like',0,NULL,'https://jjimenezshaw.github.io/NSRS-2022-PROJ/{out_file}',1,1,NULL);
 """
 
     return delete_trigger + str + usage(id, 'grid_transformation') + alternative
@@ -254,14 +268,15 @@ def make_projected(e, code, name, feet=False):
     unit = " (ft)" if feet else ""
     cs = 4495 if feet else 4499
     ref = e["Reference frame"]
+    id = f'{code}{suffix}'
     str = f"""
 INSERT INTO projected_crs VALUES (
-    '{AUTHORITY}', '{code}{suffix}', '{ref} / {name}{unit}', '{e['Zone code']}',
+    '{AUTHORITY}', '{id}', '{ref} / {name}{unit}', '{e['Zone code']}',
     'EPSG', '{cs}',
     '{AUTHORITY}', '{ref}_2D',
     '{AUTHORITY}', '{code}{suffix}', NULL,
     0);"""
-    return str
+    return str + usage(id, 'projected_crs')
 
 
 def create_spcss():
