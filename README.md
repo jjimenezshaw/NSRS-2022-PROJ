@@ -55,6 +55,17 @@ I hope I keep this list updated:
  - All state planes from `SPCS2022` in meters and international feet.
 
 
+ ## Files
+ The main output files are `nsrs_proj.db` and `us_noaa_sgeoid2022_na_v1a.tif`:
+  - `nsrs_proj.db`: auxiliary database to be used with PROJ
+  - `us_noaa_sgeoid2022_na_v1a.tif`: geoid model file with SGEOID2022 for North America (also accesible remotely with the proper configuration)
+
+
+If you want to run the scripts to generate everything yourself you will need more files, like 
+ - `empty_aux_db.sql`: generate with `projinfo --dump-db-structure > empty_aux_db.sql`
+ - `zoneDefinitions.json` and `GEOID2022.v1.a.ggxf`: downloand from NGS webpage.
+
+
 ## Examples
 
 
