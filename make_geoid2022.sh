@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 gdal_translate -if netcdf NETCDF:"GEOID2022.v1.a.ggxf":"/SGEOID2022/North America/geoidHeight" \
     -of gtiff sgeoid2022_na.tmp.tiff \
-    -a_gt -190 0.016666666666667 0 90.0 0 -0.016666666666667 -a_srs EPSG:9990
+    -a_gt -190.00833333333333 0.016666666666667 0 90.00833333333334 0 -0.016666666666667 -a_srs EPSG:9990
 
 gdal_calc.py -A sgeoid2022_na.tmp.tiff --outfile=sgeoid2022_na.tmp2.tiff --calc="A/0.0022" --type=Int16 --overwrite
 rm sgeoid2022_na.tmp.tiff
