@@ -280,7 +280,7 @@ INSERT INTO conversion_table VALUES (
 def make_projected(e, code, name, feet=False):
     suffix = "_ft" if feet else ""
     unit = " (ft)" if feet else ""
-    cs = 4495 if feet else 4499
+    cs = 1029 if feet else 4500
     ref = e["Reference frame"]
     id = f"{code}{suffix}"
     str = f"""

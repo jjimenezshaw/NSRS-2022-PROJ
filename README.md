@@ -52,7 +52,7 @@ I hope I keep this list updated:
  - Transformations from `ITRF2020` to `{N,P,C,M}ATRF2022` using a Helmert transformation with the `EPP`.
  - `SGEOID2022 North America` as GeoTIFF. It is stored as `int16` to make is smaller than 100MB. The max error is 1.1 mm. (no velocities included!)
  - Transformation from `ITRF2020` to `NAPGD2022 height` using that geoid model and linear interpolation.
- - All state planes from `SPCS2022` in meters and international feet.
+ - All state planes from `SPCS2022` in meters and international feet (as Northing-Easting).
 
 
  ## Files
@@ -121,8 +121,6 @@ PROJCS["NATRF2022 / Gulf",
     PARAMETER["false_northing",457200],
     UNIT["metre",1,
         AUTHORITY["EPSG","9001"]],
-    AXIS["Easting",EAST],
-    AXIS["Northing",NORTH],
     AUTHORITY["NSRS","GULF"]]
 ```
 
