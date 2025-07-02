@@ -35,7 +35,7 @@ AUTHORITY = "NSRS"
 TRF = "TRF2022"
 refs = ["NA", "PA", "CA", "MA"]
 names = ["North American", "Pacific", "Caribbean", "Mariana"]
-PUBLICATION_DATE = "2025-04-22"
+PUBLICATION_DATE = "2025-07-02"
 
 script_dir_name = os.path.dirname(os.path.realpath(__file__))
 
@@ -137,8 +137,8 @@ INSERT INTO vertical_crs VALUES(
 
 def create_vertical_transformations():
     id = "ITRF2020_to_NAPGD2022"
-    in_file = "GEOID2022.v1.a.ggxf"
-    out_file = "us_noaa_sgeoid2022_na_v1a.tif"
+    in_file = "GEOID2022.beta_v0.ggxf"
+    out_file = "us_noaa_sgeoid2022_na_beta_v0.tif"
     # that trigger checks the existence of some things...
     # that are in proj.db but not here.
     # so far we just delete the trigger.
@@ -151,7 +151,7 @@ INSERT INTO grid_transformation VALUES(
     'EPSG','9989', -- source CRS (ITRF2020)
     '{AUTHORITY}','NAPGD2022', -- target CRS (NAPGD2022 height)
     NULL,  -- accuracy
-    'EPSG','8666','Geoid (height correction) model file','GEOID2022.v1.a.ggxf',
+    'EPSG','8666','Geoid (height correction) model file','{in_file}',
     NULL,NULL,NULL,NULL,
     NULL,NULL,NULL,0);"""
 
@@ -164,12 +164,27 @@ INSERT INTO grid_alternatives VALUES(
 
 
 def create_itrf2020_transformations():
+    epp2022 = os.path.join(script_dir_name, "epp2022-beta-values.csv")
+    if not os.path.exists(epp2022):
+        raise Exception(
+            (
+                "Download file "
+                "https://beta.ngs.noaa.gov/NATRF2022/epp2022-beta-values.csv"
+            )
+    )
     epps = {
-        "NA": (0.051, -0.736, -0.024),
-        "PA": (-0.409, 1.047, -2.169),
-        "CA": (-0.039, -0.974, 0.611),
-        "MA": (-8.089, 5.937, 2.159),
+        "NA": None,
+        "PA": None,
+        "CA": None,
+        "MA": None,
     }
+    with open(epp2022) as f:
+        for line in f:
+            fields = line.split(",")
+            key = fields[0][0:2] # use the first two letters: NA, CA, ...
+            if key in epps:
+                epps[key] = [float(x) for x in fields[1:4]]
+
     str = ""
     for key, value in epps.items():
         str += create_itrf2020_transformation(key + TRF, *value)
@@ -199,7 +214,7 @@ INSERT INTO helmert_transformation
     "deprecated")
     VALUES
     ('{AUTHORITY}', 'ITRF2020_to_{ref}', 'ITRF2020 to {ref}',
-    'from https://alpha.ngs.noaa.gov/EPP/index.shtml',
+    'from https://beta.ngs.noaa.gov/NATRF2022/',
     'EPSG', '1056', 'Time-dependent Coordinate Frame rotation (geocen)',
     'EPSG', '9988',
     '{AUTHORITY}', '{ref}_gc',
@@ -274,6 +289,10 @@ INSERT INTO conversion_table VALUES (
     'EPSG', '8816', {easting}, 'EPSG', '{unit_code}',
     'EPSG', '8817', {northing}, 'EPSG', '{unit_code}',
     0);"""
+
+    else:
+        raise Exception("Unknown projection type " + type)
+
     return str
 
 
@@ -294,14 +313,14 @@ INSERT INTO projected_crs VALUES (
 
 
 def create_spcss():
-    # https://alpha.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json
-    # To check: https://alpha.ngs.noaa.gov/SPCS/json_data/coordinates.json
+    # https://beta.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json
+    # To check: https://beta.ngs.noaa.gov/SPCS/json_data/coordinates.json
     definitions = os.path.join(script_dir_name, "zoneDefinitions.json")
     if not os.path.exists(definitions):
         raise Exception(
             (
                 "Download file "
-                "https://alpha.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json"
+                "https://beta.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json"
             )
         )
     with open(definitions) as defs:

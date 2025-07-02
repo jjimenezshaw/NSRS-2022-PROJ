@@ -1,5 +1,5 @@
 # NSRS-2022-PROJ
-Auxiliary DB for PROJ with alpha and beta data from NATRF2022 and friends.
+Auxiliary DB for PROJ with beta data from NATRF2022 and friends.
 
 
 ## Modernized National Spatial Reference System
@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 
 
 ## Source
-Data was obtained from https://alpha.ngs.noaa.gov/
+Data was obtained from https://beta.ngs.noaa.gov/
 
 
 ## Auxiliary database
@@ -56,14 +56,14 @@ I hope I keep this list updated:
 
 
  ## Files
- The main output files are `nsrs_proj.db` and `us_noaa_sgeoid2022_na_v1a.tif`:
+ The main output files are `nsrs_proj.db` and `us_noaa_sgeoid2022_na_beta_v0.tif`:
   - `nsrs_proj.db`: auxiliary database to be used with PROJ
-  - `us_noaa_sgeoid2022_na_v1a.tif`: geoid model file with SGEOID2022 for North America (also accesible remotely with the proper configuration)
+  - `us_noaa_sgeoid2022_na_beta_v0.tif`: geoid model file with SGEOID2022 for North America (also accesible remotely with the proper configuration)
 
 
 If you want to run the scripts to generate everything yourself you will need more files, like 
  - `empty_aux_db.sql`: generate with `projinfo --dump-db-structure > empty_aux_db.sql`
- - `zoneDefinitions.json` and `GEOID2022.v1.a.ggxf`: downloand from NGS webpage.
+ - [zoneDefinitions.json](https://beta.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json), [epp2022-beta-values.csv](https://beta.ngs.noaa.gov/NATRF2022/epp2022-beta-values.csv) and [GEOID2022.beta_v0.ggxf](https://beta.ngs.noaa.gov/NAPGD2022/data/geoid2022/GEOID2022.beta_v0.ggxf): downloand from NGS webpage.
 
 
 ## Examples
@@ -114,11 +114,11 @@ PROJCS["NATRF2022 / Gulf",
             AUTHORITY["EPSG","9122"]],
         AUTHORITY["NSRS","NATRF2022_2D"]],
     PROJECTION["Lambert_Conformal_Conic_1SP"],
-    PARAMETER["latitude_of_origin",27.75],
+    PARAMETER["latitude_of_origin",28],
     PARAMETER["central_meridian",-90],
     PARAMETER["scale_factor",0.9996],
-    PARAMETER["false_easting",1524000],
-    PARAMETER["false_northing",457200],
+    PARAMETER["false_easting",1600200],
+    PARAMETER["false_northing",533400],
     UNIT["metre",1,
         AUTHORITY["EPSG","9001"]],
     AUTHORITY["NSRS","GULF"]]
@@ -127,17 +127,17 @@ PROJCS["NATRF2022 / Gulf",
 Transform from ITRF2020 with a different epoch:
 ```
 echo 50 -70 0 2030 | PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D ITRF2020 -d 9
-50.000000565	-70.000002398 0.000208146 2030
+50.000000548	-70.000002358 0.000201767 2030
 ```
 
 Use geoid model locally:
 ```
 echo 50 -70 0 | PROJ_DATA=`projinfo --searchpaths | sed -zE 's/[\r\n]+/:/g'`:./NSRS-2022-PROJ/ PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D+NAPGD2022 NSRS:NATRF2022_3D -d 9
-50.000000000	-70.000000000 -26.198699954
+50.000000000	-70.000000000 -26.199800492
 ```
 
-Use geoid model via NETWORK (there is an issue that forces the usage of PROJ_NETWORK_ENDPOINT):
+Use geoid model via NETWORK (there is an issue that forces the usage of PROJ_NETWORK_ENDPOINT, fixed in PROJ 9.6.2):
 ```
 echo 50 -70 0 | PROJ_NETWORK_ENDPOINT=https://jjimenezshaw.github.io/NSRS-2022-PROJ/ PROJ_NETWORK=ON PROJ_AUX_DB=./NSRS-2022-PROJ/nsrs_proj.db cs2cs NSRS:NATRF2022_2D+NAPGD2022 NSRS:NATRF2022_3D -d 9
-50.000000000	-70.000000000 -26.198699954
+50.000000000	-70.000000000 -26.199800492
 ```
