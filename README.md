@@ -44,6 +44,8 @@ The db produced in this repo will define an "authority", `NSRS` (but it may chan
 That will produce the CRS `NSRS:NATRF2022_2D` as something similar to `EPSG:6318`.
 Yes, the ID can use letters in PROJ (not in EPSG).
 
+This auxiliary database is now compatible with PROJ 9.7.0, 9.7.1 and 9.8.0 (last as of today).
+
 
 ## What is included
 I hope I keep this list updated:
@@ -54,6 +56,11 @@ I hope I keep this list updated:
  - Transformation from `ITRF2020` to `NAPGD2022 height` using that geoid model and linear interpolation.
  - All state planes from `SPCS2022` in meters and international feet (as Northing-Easting).
 
+## Some entries in EPSG
+Since PROJ 9.7.0 EPSG released some entries from NATRF2022 in its database to help people to integrate their systems.
+See [spatialreferece.org](https://spatialreference.org/explorer.html?searchText=NATRF2022&ignoreWorld=false&allowDeprecated=false&authorities=EPSG&activeTypes=PROJECTED_CRS,GEOGRAPHIC_2D_CRS,GEOGRAPHIC_3D_CRS,GEOCENTRIC_CRS)
+
+This axiliary database is not connected to this new entries.
 
  ## Files
  The main output files are `nsrs_proj.db` and `us_noaa_sgeoid2022_na_beta_v0.tif`:

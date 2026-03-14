@@ -153,6 +153,8 @@ INSERT INTO grid_transformation VALUES(
     NULL,  -- accuracy
     'EPSG','8666','Geoid (height correction) model file','{in_file}',
     NULL,NULL,NULL,NULL,
+    NULL,NULL,NULL,NULL,NULL,NULL,
+    NULL,NULL,NULL,NULL,NULL,NULL,
     NULL,NULL,NULL,0);"""
 
     alternative = f"""
