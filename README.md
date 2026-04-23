@@ -44,8 +44,13 @@ The db produced in this repo will define an "authority", `NSRS` (but it may chan
 That will produce the CRS `NSRS:NATRF2022_2D` as something similar to `EPSG:6318`.
 Yes, the ID can use letters in PROJ (not in EPSG).
 
-This auxiliary database is now compatible with PROJ 9.7.0, 9.7.1 and 9.8.0 (last as of today).
+This auxiliary database is now compatible with PROJ 9.7.0, 9.7.1, 9.8.0 and 9.8.1 (last as of today).
 
+## Usage in the browser
+You can now test it in https://jjimenezshaw.github.io/wasm-proj/transform.html?nsrs_aux_db=1 to make coordinate transformations.
+
+Note that the URL has the parameter `nsrs_aux_db=1` to automaticall load the auxiliary database on load.
+The same applies for the distortion factors in https://jjimenezshaw.github.io/wasm-proj/factors.html?nsrs_aux_db=1
 
 ## What is included
 I hope I keep this list updated:
