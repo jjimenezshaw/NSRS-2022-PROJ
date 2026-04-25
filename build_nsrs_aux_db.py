@@ -29,6 +29,7 @@
 
 import json
 import os
+import re
 import sqlite3
 
 AUTHORITY = "NSRS"
@@ -42,6 +43,8 @@ script_dir_name = os.path.dirname(os.path.realpath(__file__))
 
 def usage(name, table, area_code=1262):
     #  1262 is World. Without any better option, just use it
+    # for state plane we could use https://beta.ngs.noaa.gov/SPCS/json_data/zoneBounds.json
+    # but it will just make the db much bigger. Ignore it for now.
     area = f"""
 INSERT INTO usage VALUES(
     '{AUTHORITY}','{name}_USAGE','{table}','{AUTHORITY}','{name}','EPSG','{area_code}','EPSG','1024');
@@ -232,6 +235,18 @@ INSERT INTO helmert_transformation
     '0');"""
     return transf + usage(f"ITRF2020_to_{ref}", "helmert_transformation")
 
+def dms2deg(dms):
+    pattern = r"([0-9]+)\u00b0([0-9]+)'([.0-9]*).*([NSEW])"
+    m = re.match(pattern, dms)
+    if not m or len(m.groups()) < 4:
+        raise  Exception("Cannot parse dms " + dms)
+    d = float(m[1])
+    min = float(m[2])
+    s = float(m[3]) if len(m[3]) > 0 else 0
+    deg =  d + min / 60 + s / 3600
+    if m[4] == 'S' or m[4] == 'W':
+        deg = -deg
+    return deg
 
 def make_conversion(e, code, name, type, feet=False):
     suffix = "_ft" if feet else ""
@@ -242,8 +257,10 @@ def make_conversion(e, code, name, type, feet=False):
     padding = "NULL," * 10  # for TM.
     padding12 = "NULL," * 12  # for LC1
 
-    lat = e["Origin latitude (deg)"]
-    lon = e["Origin longitude west (deg)"]
+    # lat = e["Origin latitude (deg)"]
+    # lon = e["Origin longitude west (deg)"]
+    lat = dms2deg(e["Origin latitude"])
+    lon = dms2deg(e["Origin longitude west"])
     k = e["Projection origin scale"]
     easting = e[f"False easting {unit}"].replace(",", "")
     northing = e[f"False northing {unit}"].replace(",", "")
@@ -341,7 +358,7 @@ def create_spcss():
     return str
 
 
-str = ""  # f"INSERT INTO builtin_authorities VALUES ('{NSRS_AUTHORITY}');"
+str = f"INSERT INTO builtin_authorities VALUES ('{AUTHORITY}');" # to run consistency checks in the db.
 str += create_geodetic_datums()
 str += create_geodetic_crss()
 str += create_vertical_datum()
