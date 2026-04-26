@@ -36,20 +36,34 @@ AUTHORITY = "NSRS"
 TRF = "TRF2022"
 refs = ["NA", "PA", "CA", "MA"]
 names = ["North American", "Pacific", "Caribbean", "Mariana"]
-PUBLICATION_DATE = "2025-07-02"
+PUBLICATION_DATE = "2026-04-26"
 
 script_dir_name = os.path.dirname(os.path.realpath(__file__))
 
 
-def usage(name, table, area_code=1262):
+def usage(name, table, extent_code=1262, scope_code=1024):
     #  1262 is World. Without any better option, just use it
-    # for state plane we could use https://beta.ngs.noaa.gov/SPCS/json_data/zoneBounds.json
-    # but it will just make the db much bigger. Ignore it for now.
+    extent_auth = 'EPSG' if extent_code == 1262 else AUTHORITY
     area = f"""
 INSERT INTO usage VALUES(
-    '{AUTHORITY}','{name}_USAGE','{table}','{AUTHORITY}','{name}','EPSG','{area_code}','EPSG','1024');
+    '{AUTHORITY}','{name}_USAGE','{table}','{AUTHORITY}','{name}','{extent_auth}','{extent_code}','EPSG','{scope_code}');
 """
     return area
+
+
+def make_extent(code, name, desc, west, south, east, north):
+    def normalize(str):
+        n = float(str)
+        if n < -180:
+            n += 360
+        if n > 180:
+            n -= 360
+        return n
+    e = f"""
+INSERT INTO extent VALUES(
+    '{AUTHORITY}','{code}','{name}','{desc}', {south}, {north}, {normalize(west)}, {normalize(east)}, 0);
+"""
+    return e
 
 
 def create_geodetic_datums():
@@ -315,7 +329,7 @@ INSERT INTO conversion_table VALUES (
     return str
 
 
-def make_projected(e, code, name, feet=False):
+def make_projected(e, code, name, feet=False, extent_code=None, scope_code=None):
     suffix = "_ft" if feet else ""
     unit = " (ft)" if feet else ""
     cs = 1029 if feet else 4500
@@ -328,7 +342,7 @@ INSERT INTO projected_crs VALUES (
     '{AUTHORITY}', '{ref}_2D',
     '{AUTHORITY}', '{code}{suffix}', NULL,
     0);"""
-    return str + usage(id, "projected_crs")
+    return str + usage(id, "projected_crs", extent_code, scope_code)
 
 
 def create_spcss():
@@ -344,16 +358,36 @@ def create_spcss():
         )
     with open(definitions) as defs:
         d = json.load(defs)
+
+    bounds =  os.path.join(script_dir_name, "zoneBounds.json")
+    if not os.path.exists(bounds):
+        raise Exception(
+            (
+                "Download file "
+                "https://beta.ngs.noaa.gov/SPCS/json_data/zoneBounds.json"
+            )
+        )
+    with open(bounds) as bnd:
+        b = json.load(bnd)
+        bounds_dict = { x["Zone abrv"]: x for x in b }
+
     str = ""
     for e in d:
         code = e["Zone abrv"]
         name = e["Zone name"]
         type = e["Proj type"]
+        zone_type = e["Zone type"]
+        b = bounds_dict.get(code)
+        if b:
+            str += make_extent(code, name, f'{name} ({zone_type})',
+                               b["Min lon west (deg)"], b["Min lat (deg)"], b["Max lon west (deg)"], b["Max lat (deg)"])
+        else:
+            raise Exception(f"cannot find bounds for {code}")
         conv_m = make_conversion(e, code, name, type, feet=False)
-        crs_m = make_projected(e, code, name, feet=False)
+        crs_m = make_projected(e, code, name, feet=False, extent_code=code, scope_code=1294)
         str += conv_m + crs_m
         conv_ft = make_conversion(e, code, name, type, feet=True)
-        crs_ft = make_projected(e, code, name, feet=True)
+        crs_ft = make_projected(e, code, name, feet=True, extent_code=code, scope_code=1294)
         str += conv_ft + crs_ft
     return str
 
