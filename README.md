@@ -11,7 +11,7 @@ See that anything that needs a change in PROJ's source code cannot be tested unt
 
 
 ## Scope
-This repository tries to create an auxiliary database (complementary to `proj.db`) that includes some (all?) of the reference systems and transformations from the "Modernized National Spatial Reference System", also known as `NATRF2022` (among others).
+[This repository](https://github.com/jjimenezshaw/NSRS-2022-PROJ) tries to create an auxiliary database (complementary to `proj.db`) that includes some (all?) of the reference systems and transformations from the "Modernized National Spatial Reference System", also known as `NATRF2022` (among others).
 
 This project is done as a helper and exercise.
 Not as a definitive tool for production products.
@@ -35,6 +35,10 @@ DEALINGS IN THE SOFTWARE.
 ## Source
 Data was obtained from https://beta.ngs.noaa.gov/ on 2026-04-24
 
+
+## SPCS2022
+There is a map with the new state planes in [spcs2022.html](https://jjimenezshaw.github.io/NSRS-2022-PROJ/SPCS2022/spcs2022.html).
+Find more information in [SPCS2022](SPCS2022)
 
 ## Auxiliary database
 You can use the environment variable `PROJ_AUX_DB` to specify an auxiliary database to PROJ:
