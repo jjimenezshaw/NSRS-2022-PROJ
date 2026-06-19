@@ -5,6 +5,9 @@ However it is useful data to know the area of use of the different State Planes 
 The GeoJSON files are created out of the shapefile included in the folder (provided by the NOAA/NGS).
 The polygons are simplified to produce a much smaller file. Note that it may change some borders.
 
+The scripts to generate the GeoJSONs are `generate-spcs2022.py` (that extracts and simplifies the geometries)
+and `close-navajo-nation.py` (that aggregates the number of tiny parts of that particular geometry)
+
 Explore the different zones in [spcs2022.html](https://jjimenezshaw.github.io/NSRS-2022-PROJ/SPCS2022/spcs2022.html) Click on the zones to get more detailed information.
 
 

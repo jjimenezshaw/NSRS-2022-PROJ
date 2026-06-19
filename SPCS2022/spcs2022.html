@@ -77,11 +77,11 @@
         }).addTo(map);
 
         const layers = {
-            'Special Use': { file: 'simplified_special_use.geojson', color: 'dimgray', z: 5 },
-            'Special Use - Gulf': { file: 'simplified_special_use_gulf.geojson', color: 'blue', z: 4 },
-            'Multizone Partial': { file: 'simplified_partial.geojson', color: 'green', z: 3 },
-            'Multizone Complete': { file: 'simplified_complete.geojson', color: 'salmon', z: 2 },
-            'Statewide': { file: 'simplified_statewide.geojson', color: 'orange', z: 1, load: true },
+            'Special Use': { file: 'special_use.geojson', color: 'dimgray', z: 5 },
+            'Special Use - Gulf': { file: 'special_use_gulf.geojson', color: 'blue', z: 4 },
+            'Multizone Partial': { file: 'multizone_partial.geojson', color: 'green', z: 3 },
+            'Multizone Complete': { file: 'multizone_complete.geojson', color: 'salmon', z: 2 },
+            'Statewide': { file: 'statewide.geojson', color: 'orange', z: 1, load: true },
         }
 
         const control = L.control.layers(null, null, { collapsed: false }).addTo(map);
@@ -113,7 +113,7 @@
                     return html;
                 }, { minWidth: 180 });
                 if (metadata.load) layer.addTo(map);
-                const name_with_box = `${name} <span class="color-box" style="background-color: ${metadata.color};"></span>`;
+                const name_with_box = `<span class="color-box" style="background-color: ${metadata.color};"></span> ${name}`;
                 control.addOverlay(layer, name_with_box)
             }
         }
