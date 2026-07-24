@@ -154,8 +154,8 @@ INSERT INTO vertical_crs VALUES(
 
 def create_vertical_transformations():
     id = "ITRF2020_to_NAPGD2022"
-    in_file = "GEOID2022.beta_v0.ggxf"
-    out_file = "us_noaa_sgeoid2022_na_beta_v0.tif"
+    in_file = "GEOID2022.beta_v0a.ggxf"
+    out_file = "us_noaa_geoid2022_beta_v0a.tif"
     # that trigger checks the existence of some things...
     # that are in proj.db but not here.
     # so far we just delete the trigger.
