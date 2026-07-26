@@ -53,6 +53,12 @@
             opacity: 0.6;
             display: inline-block;
         }
+
+        .div-in-textbox {
+            padding: 5px;
+            border: none;
+            background-color: white;
+        }
     </style>
 </head>
 
@@ -68,6 +74,19 @@
                 return await response.json();
             }
         }
+
+        L.Control.Textbox = L.Control.extend({
+            options: {
+                position: 'topright',
+                innerHTML: 'There should be something'
+            },
+            onAdd: function (map) {
+                var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                var div = L.DomUtil.create('div', 'div-in-textbox', container);
+                div.innerHTML = this.options.innerHTML;
+                return container;
+            }
+        });
 
         const map = L.map('map').setView([35, -100], 3);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -86,6 +105,138 @@
 
         const control = L.control.layers(null, null, { collapsed: false }).addTo(map);
 
+        const radiosTxt = 'Show on click:<br> \
+                      <input type="radio" id="props" name="r" value="props" checked /><label for="props">Details</label> \
+                      <input type="radio" id="facts" name="r" value="facts" /><label for="facts">Distortion factors</label>';
+
+        const radios = new L.Control.Textbox({ position: 'topright', innerHTML: radiosTxt });
+        radios.addTo(map);
+        document.getElementById('facts').addEventListener('change', load_proj, { once: true });
+
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = true;
+                script.onload = () => {
+                    resolve(`Successfully loaded: ${url}`);
+                };
+                script.onerror = () => {
+                    reject(new Error(`Failed to load script at: ${url}`));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        let proj = null;
+        async function load_proj() {
+            try {
+                // Promise.all triggers both downloads simultaneously
+                await Promise.all([
+                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/wasm/projModule.js'),
+                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/projFunctions.js'),
+                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/projBridge.js')
+                ]);
+
+                console.log("Both scripts are loaded and ready!");
+                //proj = new Proj();
+                const bridge = new WorkerBridge(undefined, undefined);
+                proj = bridge.create_main_proxy();
+                await proj.init();
+                console.log(`proj loaded`, proj.proj_info())
+                return proj;
+            } catch (error) {
+                console.error("One of the scripts failed to load:", error);
+            }
+        }
+
+        function create_crs(p) {
+            let str = ''
+            if (p.ProjAbrv == "OMC") {
+                str += `+proj=omerc +lonc=${p.Lon0_W_deg} +alpha=${p.SkewAz_deg} +gamma=${p.SkewAz_deg}`;
+            } else if (p.ProjAbrv == "LC1") {
+                str += `+proj=lcc +lat_1=${p.Lat0_deg} +lon_0=${p.Lon0_W_deg}`
+            } else if (p.ProjAbrv == "TM") {
+                str += `+proj=tmerc +lon_0=${p.Lon0_W_deg}`
+            }
+            str += ` +lat_0=${p.Lat0_deg} +k_0=${p.ProjScale} +x_0=${p.FalseE_m} +y_0=${p.FalseN_m} +ellps=GRS80 +type=crs`;
+            return str;
+        }
+
+        async function get_elevation(latlng) {
+            const settings = {
+                method: 'POST',
+                body: JSON.stringify([[latlng.lat, latlng.lng]]),
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                }
+            };
+            try {
+                const fetchResponse = await fetch(`https://elevation.racemap.com/api`, settings);
+                const data = await fetchResponse.json();
+                return data[0];
+            } catch (e) {
+                throw e;
+            }
+        }
+
+        async function get_undulation(latlng) {
+            let undulation = NaN;
+            const pipeline = `+proj=pipeline
+                +step +proj=axisswap +order=2,1
+                +step +proj=unitconvert +xy_in=deg +xy_out=rad
+                +step +inv +proj=vgridshift +grids=https://jjimenezshaw.github.io/NSRS-2022-PROJ/us_noaa_sgeoid2022_na_beta_v0.tif +multiplier=-1
+                +step +proj=utm +zone=30 +ellps=WGS84`
+            let transformer;
+            try {
+                transformer = await proj.create_transformer_from_pipeline({
+                    pipeline: pipeline,
+                    use_network: true
+                });
+                const transformed = await transformer.transform({ points: [[latlng.lat, latlng.lng, 0]] });
+                console.log(transformed);
+                undulation = transformed[0][2];
+            } catch (e) {
+                console.log(`cannot get undulation at ${latlng}`, e);
+                // throw e;
+            } finally {
+                if (transformer) await transformer.dispose();
+            }
+            return undulation;
+        }
+
+        async function project(latlng, properties) {
+            if (!proj) {
+                await load_proj()
+            }
+            crs = create_crs(properties);
+            let transformer;
+            try {
+                transformer = await proj.create_transformer_from_crs({
+                    source_crs: 'EPSG:4326',
+                    target_crs: crs
+                });
+                const transformed = await transformer.transform({ points: [[latlng.lat, latlng.lng]] });
+                return transformed[0];
+            } catch (e) {
+                console.log(`cannot get coordinates at ${latlng}`, e)
+                // throw e;
+            } finally {
+                if (transformer) await transformer.dispose();
+            }
+            return undefined;
+        }
+
+        async function compute_factors(latlng, h, properties) {
+            if (!proj) {
+                await load_proj()
+            }
+            crs = create_crs(properties);
+            const factors = await proj.factors({ crs: crs, points: [[latlng.lat, latlng.lng, h]] });
+            return factors[0];
+        }
+
         async function load() {
             for (const name in layers) {
                 const metadata = layers[name];
@@ -97,21 +248,61 @@
                     pane: name,
                     style: function (feature) {
                         return { color: metadata.color, weight: 1 };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on({
+                            click: async function (e) {
+                                const prop = feature.properties;
+                                if (document.getElementById('facts').checked) {
+                                    const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
+
+                                    let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}<br>
+                                        Lat lon (deg): ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+                                    layer.bindPopup(html).openPopup(e.latlng);
+                                    const en = await project(e.latlng, feature.properties);
+                                    html += `<br>Northing Easting (m): ${en[1].toFixed(1)}, ${en[0].toFixed(1)}`;
+                                    layer.setPopupContent(html);
+
+                                    let f = await compute_factors(e.latlng, 0, feature.properties);
+                                    html += `<br>Convergence (deg): ${f.meridian_convergence.toFixed(5)}`;
+                                    html += `<br>Projection distortion: ${ff(f.meridional_scale)}`;
+                                    layer.setPopupContent(html);
+
+                                    const elev = await get_elevation(e.latlng);
+                                    html += `<br>H: ${elev} m`;
+                                    layer.setPopupContent(html);
+
+                                    const N = await get_undulation(e.latlng);
+                                    html += ` ; N: ${N.toFixed(2)} m`;
+                                    layer.setPopupContent(html);
+
+                                    f = await compute_factors(e.latlng, elev + N, feature.properties);
+                                    html += `<br>Elevation distortion: ${ff(f.elevation_factor)}`;
+                                    html += `<br>Combined distortion: ${ff(f.combined_factor)}`;
+                                    layer.setPopupContent(html);
+                                } else {
+                                    let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}`;
+                                    html += '<details><summary>Details</summary><div class="more-data">';
+                                    for (const k in prop) {
+                                        if (k != 'fid' && prop[k] !== null && prop[k] !== -9999)
+                                            html += `<span class="attrname">${k}:</span> ${prop[k]}<br>`;
+                                    }
+                                    html += '</div></details > ';
+                                    layer.bindPopup(html, { minWidth: 180 }).openPopup(e.latlng);
+                                }
+                            },
+                            mouseover: function (e) {
+                                e.target.setStyle({ weight: 4 });
+                            },
+                            mouseout: function (e) {
+                                e.target.setStyle({ weight: 1 });
+                            }
+                        });
                     }
                 }).bindTooltip(function (layer) {
                     return layer.feature.properties.AbrvFull;
                 }, { direction: 'center', opacity: 0.8 }
-                ).bindPopup(function (layer) {
-                    const prop = layer.feature.properties;
-                    let html = `${prop.AbrvFull}<br>${prop.NameFull}`;
-                    html += '<details> <summary>Details</summary><div class="more-data">';
-                    for (const k in prop) {
-                        if (k != 'fid' && prop[k] !== null && prop[k] !== -9999)
-                            html += `<span class="attrname">${k}:</span> ${prop[k]}<br>`;
-                    }
-                    html += '</div></details>';
-                    return html;
-                }, { minWidth: 180 });
+                );
                 if (metadata.load) layer.addTo(map);
                 const name_with_box = `<span class="color-box" style="background-color: ${metadata.color};"></span> ${name}`;
                 control.addOverlay(layer, name_with_box)
