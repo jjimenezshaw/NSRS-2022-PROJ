@@ -186,7 +186,7 @@
             const pipeline = `+proj=pipeline
                 +step +proj=axisswap +order=2,1
                 +step +proj=unitconvert +xy_in=deg +xy_out=rad
-                +step +inv +proj=vgridshift +grids=us_nga_egm08_25.tif +multiplier=-1
+                +step +inv +proj=vgridshift +grids=https://jjimenezshaw.github.io/NSRS-2022-PROJ/us_noaa_sgeoid2022_na_beta_v0.tif +multiplier=-1
                 +step +proj=utm +zone=30 +ellps=WGS84`
             let transformer;
             try {
