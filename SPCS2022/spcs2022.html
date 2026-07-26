@@ -133,12 +133,30 @@
                 // Promise.all triggers both downloads simultaneously
                 await Promise.all([
                     loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/wasm/projModule.js'),
-                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/projFunctions.js')
+                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/projFunctions.js'),
+                    loadScript('https://jjimenezshaw.github.io/wasm-proj/proj/projBridge.js')
                 ]);
 
                 console.log("Both scripts are loaded and ready!");
-                proj = new Proj();
+                //proj = new Proj();
+                const bridge = new WorkerBridge(undefined, undefined);
+                proj = bridge.create_main_proxy();
                 await proj.init();
+
+                const pipeline = `+proj=pipeline
+  +step +proj=axisswap +order=2,1
+  +step +proj=unitconvert +xy_in=deg +xy_out=rad
+  +step +inv +proj=vgridshift +grids=us_nga_egm08_25.tif +multiplier=1
+  +step +proj=utm +zone=30 +ellps=WGS84`
+                const transformer = await proj.create_transformer_from_pipeline({
+                    pipeline: pipeline,
+                    use_network: true
+                });
+                const transformed = await transformer.transform({ points: [[40, 0, 0]] });
+                console.log(transformed);
+                await transformer.dispose();
+
+
                 console.log(`proj loaded`, proj.proj_info())
                 return proj;
             } catch (error) {
