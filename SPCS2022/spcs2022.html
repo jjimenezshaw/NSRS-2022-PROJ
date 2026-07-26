@@ -106,7 +106,7 @@
         const control = L.control.layers(null, null, { collapsed: false }).addTo(map);
 
         const radiosTxt = 'Show on click:<br> \
-                      <input type="radio" id="props" name="r" value="props" checked /><label for="props">Properties</label> \
+                      <input type="radio" id="props" name="r" value="props" checked /><label for="props">Details</label> \
                       <input type="radio" id="facts" name="r" value="facts" /><label for="facts">Distortion factors</label>';
 
         const radios = new L.Control.Textbox({ position: 'topright', innerHTML: radiosTxt });
@@ -255,7 +255,7 @@
                             if (document.getElementById('facts').checked) {
                                 const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
 
-                                let html = `<strong>${prop.AbrvFull}</strong><br>
+                                let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}<br>
                                     Lat lon (deg): ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
                                 layer.bindPopup(html).openPopup(e.latlng);
                                 const en = await project(e.latlng, feature.properties);
@@ -263,6 +263,7 @@
                                 layer.setPopupContent(html);
 
                                 let f = await compute_factors(e.latlng, 0, feature.properties);
+                                html += `<br>Convergence (deg): ${f.meridian_convergence.toFixed(5)}`;
                                 html += `<br>Projection distortion: ${ff(f.meridional_scale)}`;
                                 layer.setPopupContent(html);
 
@@ -279,8 +280,8 @@
                                 html += `<br>Combined distortion: ${ff(f.combined_factor)}`;
                                 layer.setPopupContent(html);
                             } else {
-                                let html = `${prop.AbrvFull}<br>${prop.NameFull}`;
-                                html += '<details>< summary >Details</summary ><div class="more-data">';
+                                let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}`;
+                                html += '<details><summary>Details</summary><div class="more-data">';
                                 for (const k in prop) {
                                     if (k != 'fid' && prop[k] !== null && prop[k] !== -9999)
                                         html += `<span class="attrname">${k}:</span> ${prop[k]}<br>`;
