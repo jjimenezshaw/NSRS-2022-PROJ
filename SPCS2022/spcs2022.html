@@ -111,6 +111,7 @@
 
         const radios = new L.Control.Textbox({ position: 'topright', innerHTML: radiosTxt });
         radios.addTo(map);
+        document.getElementById('facts').addEventListener('change', load_proj, { once: true });
 
         function loadScript(url) {
             return new Promise((resolve, reject) => {
@@ -142,21 +143,6 @@
                 const bridge = new WorkerBridge(undefined, undefined);
                 proj = bridge.create_main_proxy();
                 await proj.init();
-
-                const pipeline = `+proj=pipeline
-  +step +proj=axisswap +order=2,1
-  +step +proj=unitconvert +xy_in=deg +xy_out=rad
-  +step +inv +proj=vgridshift +grids=us_nga_egm08_25.tif +multiplier=1
-  +step +proj=utm +zone=30 +ellps=WGS84`
-                const transformer = await proj.create_transformer_from_pipeline({
-                    pipeline: pipeline,
-                    use_network: true
-                });
-                const transformed = await transformer.transform({ points: [[40, 0, 0]] });
-                console.log(transformed);
-                await transformer.dispose();
-
-
                 console.log(`proj loaded`, proj.proj_info())
                 return proj;
             } catch (error) {
@@ -167,21 +153,20 @@
         function create_crs(p) {
             let str = ''
             if (p.ProjAbrv == "OMC") {
-                str += `+proj=omerc 
-                    +lat_0=${p.Lat0_deg} +lonc=${p.Lon0_W_deg} 
-                    +alpha=${p.SkewAz_deg} +gamma=${p.SkewAz_deg}`;
+                str += `+proj=omerc +lonc=${p.Lon0_W_deg} +alpha=${p.SkewAz_deg} +gamma=${p.SkewAz_deg}`;
             } else if (p.ProjAbrv == "LC1") {
-                str += `+proj=lcc +lat_1=${p.Lat0_deg} +lat_0=${p.Lat0_deg} +lon_0=${p.Lon0_W_deg}`
+                str += `+proj=lcc +lat_1=${p.Lat0_deg} +lon_0=${p.Lon0_W_deg}`
             } else if (p.ProjAbrv == "TM") {
-                str += `+proj=tmerc +lat_0=${p.Lat0_deg} +lon_0=${p.Lon0_W_deg}`
+                str += `+proj=tmerc +lon_0=${p.Lon0_W_deg}`
             }
-            str += ` +k_0=${p.ProjScale} +x_0=${p.FalseE_m} +y_0=${p.FalseN_m} +ellps=GRS80 +type=crs`;
+            str += ` +lat_0=${p.Lat0_deg} +k_0=${p.ProjScale} +x_0=${p.FalseE_m} +y_0=${p.FalseN_m} +ellps=GRS80 +type=crs`;
             return str;
         }
-        async function get_elevation(latlon) {
+
+        async function get_elevation(latlng) {
             const settings = {
                 method: 'POST',
-                body: JSON.stringify([[latlon.lat, latlon.lng]]),
+                body: JSON.stringify([[latlng.lat, latlng.lng]]),
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -195,23 +180,61 @@
                 throw e;
             }
         }
-        async function compute_factors(latlon, properties) {
+
+        async function get_undulation(latlng) {
+            let undulation = NaN;
+            const pipeline = `+proj=pipeline
+                +step +proj=axisswap +order=2,1
+                +step +proj=unitconvert +xy_in=deg +xy_out=rad
+                +step +inv +proj=vgridshift +grids=us_nga_egm08_25.tif +multiplier=-1
+                +step +proj=utm +zone=30 +ellps=WGS84`
+            let transformer;
+            try {
+                transformer = await proj.create_transformer_from_pipeline({
+                    pipeline: pipeline,
+                    use_network: true
+                });
+                const transformed = await transformer.transform({ points: [[latlng.lat, latlng.lng, 0]] });
+                console.log(transformed);
+                undulation = transformed[0][2];
+            } catch (e) {
+                console.log(`cannot get undulation at ${latlng}`, e);
+                // throw e;
+            } finally {
+                if (transformer) await transformer.dispose();
+            }
+            return undulation;
+        }
+
+        async function project(latlng, properties) {
             if (!proj) {
                 await load_proj()
             }
             crs = create_crs(properties);
-            const elev = await get_elevation(latlon);
-            console.log(elev);
-            const factors = await proj.factors({ crs: crs, points: [[latlon.lat, latlon.lng, elev]] });
-            console.log(factors)
-            const f = factors[0];
-            let r = `Point: ${latlon.lat.toFixed(4)}, ${latlon.lng.toFixed(4)}, ${elev}<br>`
-            const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
-            r += 'Distortion factors:<br>';
-            r += `Projection: ${ff(f.meridional_scale)}<br>`;
-            r += `Elevation: ${ff(f.elevation_factor)}<br>`;
-            r += `Combined: ${ff(f.combined_factor)}`;
-            return r;
+            let transformer;
+            try {
+                transformer = await proj.create_transformer_from_crs({
+                    source_crs: 'EPSG:4326',
+                    target_crs: crs
+                });
+                const transformed = await transformer.transform({ points: [[latlng.lat, latlng.lng]] });
+                return transformed[0];
+            } catch (e) {
+                console.log(`cannot get coordinates at ${latlng}`, e)
+                // throw e;
+            } finally {
+                if (transformer) await transformer.dispose();
+            }
+            return undefined;
+        }
+
+        async function compute_factors(latlng, h, properties) {
+            if (!proj) {
+                await load_proj()
+            }
+            crs = create_crs(properties);
+            const factors = await proj.factors({ crs: crs, points: [[latlng.lat, latlng.lng, h]] });
+            return factors[0];
         }
 
         async function load() {
@@ -230,9 +253,30 @@
                         layer.on('click', async function (e) {
                             const prop = feature.properties;
                             if (document.getElementById('facts').checked) {
-                                layer.bindPopup(`<strong>${prop.AbrvFull}</strong>`).openPopup(e.latlng);
-                                const factors = await compute_factors(e.latlng, feature.properties);
-                                const html = `<strong>${prop.AbrvFull}</strong><br>${factors}`;
+                                const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
+
+                                let html = `<strong>${prop.AbrvFull}</strong><br>
+                                    Lat lon (deg): ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+                                layer.bindPopup(html).openPopup(e.latlng);
+                                const en = await project(e.latlng, feature.properties);
+                                html += `<br>Northing Easting (m): ${en[1].toFixed(1)}, ${en[0].toFixed(1)}`;
+                                layer.setPopupContent(html);
+
+                                let f = await compute_factors(e.latlng, 0, feature.properties);
+                                html += `<br>Projection distortion: ${ff(f.meridional_scale)}`;
+                                layer.setPopupContent(html);
+
+                                const elev = await get_elevation(e.latlng);
+                                html += `<br>H: ${elev} m`;
+                                layer.setPopupContent(html);
+
+                                const N = await get_undulation(e.latlng);
+                                html += ` ; N: ${N.toFixed(2)} m`;
+                                layer.setPopupContent(html);
+
+                                f = await compute_factors(e.latlng, elev + N, feature.properties);
+                                html += `<br>Elevation distortion: ${ff(f.elevation_factor)}`;
+                                html += `<br>Combined distortion: ${ff(f.combined_factor)}`;
                                 layer.setPopupContent(html);
                             } else {
                                 let html = `${prop.AbrvFull}<br>${prop.NameFull}`;
