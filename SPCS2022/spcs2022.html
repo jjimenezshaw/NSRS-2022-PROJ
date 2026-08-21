@@ -250,47 +250,54 @@
                         return { color: metadata.color, weight: 1 };
                     },
                     onEachFeature: function (feature, layer) {
-                        layer.on('click', async function (e) {
-                            const prop = feature.properties;
-                            if (document.getElementById('facts').checked) {
-                                const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
+                        layer.on({
+                            click: async function (e) {
+                                const prop = feature.properties;
+                                if (document.getElementById('facts').checked) {
+                                    const ff = (p) => `${p.toFixed(6)} (${((p - 1) * 1e6).toFixed(2)} ppm)`
 
-                                let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}<br>
-                                    Lat lon (deg): ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-                                layer.bindPopup(html).openPopup(e.latlng);
-                                const en = await project(e.latlng, feature.properties);
-                                html += `<br>Northing Easting (m): ${en[1].toFixed(1)}, ${en[0].toFixed(1)}`;
-                                layer.setPopupContent(html);
+                                    let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}<br>
+                                        Lat lon (deg): ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+                                    layer.bindPopup(html).openPopup(e.latlng);
+                                    const en = await project(e.latlng, feature.properties);
+                                    html += `<br>Northing Easting (m): ${en[1].toFixed(1)}, ${en[0].toFixed(1)}`;
+                                    layer.setPopupContent(html);
 
-                                let f = await compute_factors(e.latlng, 0, feature.properties);
-                                html += `<br>Convergence (deg): ${f.meridian_convergence.toFixed(5)}`;
-                                html += `<br>Projection distortion: ${ff(f.meridional_scale)}`;
-                                layer.setPopupContent(html);
+                                    let f = await compute_factors(e.latlng, 0, feature.properties);
+                                    html += `<br>Convergence (deg): ${f.meridian_convergence.toFixed(5)}`;
+                                    html += `<br>Projection distortion: ${ff(f.meridional_scale)}`;
+                                    layer.setPopupContent(html);
 
-                                const elev = await get_elevation(e.latlng);
-                                html += `<br>H: ${elev} m`;
-                                layer.setPopupContent(html);
+                                    const elev = await get_elevation(e.latlng);
+                                    html += `<br>H: ${elev} m`;
+                                    layer.setPopupContent(html);
 
-                                const N = await get_undulation(e.latlng);
-                                html += ` ; N: ${N.toFixed(2)} m`;
-                                layer.setPopupContent(html);
+                                    const N = await get_undulation(e.latlng);
+                                    html += ` ; N: ${N.toFixed(2)} m`;
+                                    layer.setPopupContent(html);
 
-                                f = await compute_factors(e.latlng, elev + N, feature.properties);
-                                html += `<br>Elevation distortion: ${ff(f.elevation_factor)}`;
-                                html += `<br>Combined distortion: ${ff(f.combined_factor)}`;
-                                layer.setPopupContent(html);
-                            } else {
-                                let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}`;
-                                html += '<details><summary>Details</summary><div class="more-data">';
-                                for (const k in prop) {
-                                    if (k != 'fid' && prop[k] !== null && prop[k] !== -9999)
-                                        html += `<span class="attrname">${k}:</span> ${prop[k]}<br>`;
+                                    f = await compute_factors(e.latlng, elev + N, feature.properties);
+                                    html += `<br>Elevation distortion: ${ff(f.elevation_factor)}`;
+                                    html += `<br>Combined distortion: ${ff(f.combined_factor)}`;
+                                    layer.setPopupContent(html);
+                                } else {
+                                    let html = `<strong>${prop.AbrvFull}</strong><br>${prop.NameFull}`;
+                                    html += '<details><summary>Details</summary><div class="more-data">';
+                                    for (const k in prop) {
+                                        if (k != 'fid' && prop[k] !== null && prop[k] !== -9999)
+                                            html += `<span class="attrname">${k}:</span> ${prop[k]}<br>`;
+                                    }
+                                    html += '</div></details > ';
+                                    layer.bindPopup(html, { minWidth: 180 }).openPopup(e.latlng);
                                 }
-                                html += '</div></details > ';
-                                layer.bindPopup(html, { minWidth: 180 }).openPopup(e.latlng);
+                            },
+                            mouseover: function (e) {
+                                e.target.setStyle({ weight: 4 });
+                            },
+                            mouseout: function (e) {
+                                e.target.setStyle({ weight: 1 });
                             }
                         });
-
                     }
                 }).bindTooltip(function (layer) {
                     return layer.feature.properties.AbrvFull;
