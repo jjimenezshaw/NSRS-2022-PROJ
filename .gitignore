@@ -1,6 +1,7 @@
 empty_aux_db.sql
 nsrs_proj.sql
+epp2022-beta-values.csv
+zoneBounds.json
 zoneDefinitions.json
 coordinates.json
-GEOID2022.v1.a.ggxf
-GEOID2022.beta_v0.ggxf
+GEOID2022.beta_v0a.ggxf

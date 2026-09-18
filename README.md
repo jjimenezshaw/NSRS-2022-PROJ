@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 
 
 ## Source
-Data was obtained from https://beta.ngs.noaa.gov/ on 2026-04-24
+Data was obtained from https://beta.ngs.noaa.gov/ on 2026-09-18
 
 
 ## SPCS2022
@@ -48,20 +48,22 @@ The db produced in this repo will define an "authority", `NSRS` (but it may chan
 That will produce the CRS `NSRS:NATRF2022_2D` as something similar to `EPSG:6318`.
 Yes, the ID can use letters in PROJ (not in EPSG).
 
-This auxiliary database is now compatible with PROJ 9.7.0, 9.7.1, 9.8.0 and 9.8.1 (last as of today).
+This auxiliary database is now compatible with PROJ 9.9.0 (last as of today).
+Due to changes in `proj.db` schema, you should generate your own for previous version of PROJ.
 
 ## Usage in the browser
 You can now test it in https://jjimenezshaw.github.io/wasm-proj/transform.html?nsrs_aux_db=1 to make coordinate transformations.
 
 Note that the URL has the parameter `nsrs_aux_db=1` to automaticall load the auxiliary database on load.
 The same applies for the distortion factors in https://jjimenezshaw.github.io/wasm-proj/factors.html?nsrs_aux_db=1
+and projinfo in https://jjimenezshaw.github.io/wasm-proj/projinfo.html?nsrs_aux_db=1
 
 ## What is included
 I hope I keep this list updated:
  - Geographic CRSs for `{N,P,C,M}ATRF2022` in the 3 flavours: geocentric, geographic 3D and 2D.
  - Vertical systems `NAPGD2022 height` and `NAPGD2022 height (ft)`.
  - Transformations from `ITRF2020` to `{N,P,C,M}ATRF2022` using a Helmert transformation with the `EPP`.
- - `SGEOID2022 North America` as GeoTIFF. It is stored as `int16` to make is smaller than 100MB. The max error is 1.1 mm. (no velocities included!)
+ - `GEOID2022` as GeoTIFF. It is stored as `int16` to make is smaller than 100MB. The max error is 1.1 mm. (no velocities included!)
  - Transformation from `ITRF2020` to `NAPGD2022 height` using that geoid model and linear interpolation.
  - All state planes from `SPCS2022` in meters and international feet (as Northing-Easting).
 
@@ -72,14 +74,17 @@ See [spatialreferece.org](https://spatialreference.org/explorer.html?searchText=
 This axiliary database is not connected to this new entries.
 
  ## Files
- The main output files are `nsrs_proj.db` and `us_noaa_sgeoid2022_na_beta_v0.tif`:
+ The main output files are `nsrs_proj.db` and `us_noaa_geoid2022_beta_v0a.tif`:
   - `nsrs_proj.db`: auxiliary database to be used with PROJ
-  - `us_noaa_sgeoid2022_na_beta_v0.tif`: geoid model file with SGEOID2022 for North America (also accesible remotely with the proper configuration)
+  - `us_noaa_geoid2022_beta_v0a.tif`: geoid model file with GEOID2022 (also accesible remotely with the proper configuration)
 
 
 If you want to run the scripts to generate everything yourself you will need more files, like 
  - `empty_aux_db.sql`: generate with `projinfo --dump-db-structure > empty_aux_db.sql`
- - [zoneDefinitions.json](https://beta.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json), [epp2022-beta-values.csv](https://beta.ngs.noaa.gov/NATRF2022/epp2022-beta-values.csv) and [GEOID2022.beta_v0.ggxf](https://beta.ngs.noaa.gov/NAPGD2022/data/geoid2022/GEOID2022.beta_v0.ggxf): downloand from NGS webpage.
+ - [zoneDefinitions.json](https://beta.ngs.noaa.gov/SPCS/json_data/zoneDefinitions.json), 
+ [zoneBounds.json](https://beta.ngs.noaa.gov/SPCS/json_data/zoneBounds.json),
+ [epp2022-beta-values.csv](https://beta.ngs.noaa.gov/NATRF2022/epp2022-beta-values.csv)
+ and [GEOID2022.beta_v0a.ggxf](https://beta.ngs.noaa.gov/NAPGD2022/data/geoid2022/GEOID2022.beta_v0a.ggxf): downloand from NGS webpage.
 
 
 ## Examples

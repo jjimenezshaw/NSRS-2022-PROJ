@@ -43,7 +43,7 @@ script_dir_name = os.path.dirname(os.path.realpath(__file__))
 
 def usage(name, table, extent_code=1262, scope_code=1024):
     #  1262 is World. Without any better option, just use it
-    extent_auth = 'EPSG' if extent_code == 1262 else AUTHORITY
+    extent_auth = "EPSG" if extent_code == 1262 else AUTHORITY
     area = f"""
 INSERT INTO usage VALUES(
     '{AUTHORITY}','{name}_USAGE','{table}','{AUTHORITY}','{name}','{extent_auth}','{extent_code}','EPSG','{scope_code}');
@@ -59,6 +59,7 @@ def make_extent(code, name, desc, west, south, east, north):
         if n > 180:
             n -= 360
         return n
+
     e = f"""
 INSERT INTO extent VALUES(
     '{AUTHORITY}','{code}','{name}','{desc}', {south}, {north}, {normalize(west)}, {normalize(east)}, 0);
@@ -190,7 +191,7 @@ def create_itrf2020_transformations():
                 "Download file "
                 "https://beta.ngs.noaa.gov/NATRF2022/epp2022-beta-values.csv"
             )
-    )
+        )
     epps = {
         "NA": None,
         "PA": None,
@@ -200,7 +201,7 @@ def create_itrf2020_transformations():
     with open(epp2022) as f:
         for line in f:
             fields = line.split(",")
-            key = fields[0][0:2] # use the first two letters: NA, CA, ...
+            key = fields[0][0:2]  # use the first two letters: NA, CA, ...
             if key in epps:
                 epps[key] = [float(x) for x in fields[1:4]]
 
@@ -249,18 +250,20 @@ INSERT INTO helmert_transformation
     '0');"""
     return transf + usage(f"ITRF2020_to_{ref}", "helmert_transformation")
 
+
 def dms2deg(dms):
     pattern = r"([0-9]+)\u00b0([0-9]+)'([.0-9]*).*([NSEW])"
     m = re.match(pattern, dms)
     if not m or len(m.groups()) < 4:
-        raise  Exception("Cannot parse dms " + dms)
+        raise Exception("Cannot parse dms " + dms)
     d = float(m[1])
     min = float(m[2])
     s = float(m[3]) if len(m[3]) > 0 else 0
-    deg =  d + min / 60 + s / 3600
-    if m[4] == 'S' or m[4] == 'W':
+    deg = d + min / 60 + s / 3600
+    if m[4] == "S" or m[4] == "W":
         deg = -deg
     return deg
+
 
 def make_conversion(e, code, name, type, feet=False):
     suffix = "_ft" if feet else ""
@@ -359,7 +362,7 @@ def create_spcss():
     with open(definitions) as defs:
         d = json.load(defs)
 
-    bounds =  os.path.join(script_dir_name, "zoneBounds.json")
+    bounds = os.path.join(script_dir_name, "zoneBounds.json")
     if not os.path.exists(bounds):
         raise Exception(
             (
@@ -369,7 +372,7 @@ def create_spcss():
         )
     with open(bounds) as bnd:
         b = json.load(bnd)
-        bounds_dict = { x["Zone abrv"]: x for x in b }
+        bounds_dict = {x["Zone abrv"]: x for x in b}
 
     str = ""
     for e in d:
@@ -379,20 +382,32 @@ def create_spcss():
         zone_type = e["Zone type"]
         b = bounds_dict.get(code)
         if b:
-            str += make_extent(code, name, f'{name} ({zone_type})',
-                               b["Min lon west (deg)"], b["Min lat (deg)"], b["Max lon west (deg)"], b["Max lat (deg)"])
+            str += make_extent(
+                code,
+                name,
+                f"{name} ({zone_type})",
+                b["Min lon west (deg)"],
+                b["Min lat (deg)"],
+                b["Max lon west (deg)"],
+                b["Max lat (deg)"],
+            )
         else:
             raise Exception(f"cannot find bounds for {code}")
         conv_m = make_conversion(e, code, name, type, feet=False)
-        crs_m = make_projected(e, code, name, feet=False, extent_code=code, scope_code=1294)
+        crs_m = make_projected(
+            e, code, name, feet=False, extent_code=code, scope_code=1294
+        )
         str += conv_m + crs_m
         conv_ft = make_conversion(e, code, name, type, feet=True)
-        crs_ft = make_projected(e, code, name, feet=True, extent_code=code, scope_code=1294)
+        crs_ft = make_projected(
+            e, code, name, feet=True, extent_code=code, scope_code=1294
+        )
         str += conv_ft + crs_ft
     return str
 
 
-str = f"INSERT INTO builtin_authorities VALUES ('{AUTHORITY}');" # to run consistency checks in the db.
+# to run consistency checks in the db.
+str = f"INSERT INTO builtin_authorities VALUES ('{AUTHORITY}');"
 str += create_geodetic_datums()
 str += create_geodetic_crss()
 str += create_vertical_datum()
