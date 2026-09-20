@@ -251,6 +251,81 @@ INSERT INTO helmert_transformation
     return transf + usage(f"ITRF2020_to_{ref}", "helmert_transformation")
 
 
+def create_nadcon_transformations():
+    str = ''
+    data = [
+        {
+            "id": "NAD83_2011_to_NATRF2022_EPSG",
+            "name": "NAD83(2011) to NATRF2022 -EPSG-",
+            "in_file": "nad83_2011.natrf2022_2020.conus",
+            "out_file": 'us_noaa_nadcon5_nad83_2011_natrf2022_2020_conus.tif',
+            "src_auth": "EPSG", "src_code": "6318",
+            "tgt_auth": "EPSG", "tgt_code": "10968",
+            "omit_alternative": True,
+        },
+        {
+            "id": "NAD83_2011_to_NATRF2022",
+            "name": "NAD83(2011) to NATRF2022",
+            "in_file": "nad83_2011.natrf2022_2020.conus",
+            "out_file": 'us_noaa_nadcon5_nad83_2011_natrf2022_2020_conus.tif',
+            "src_auth": "EPSG", "src_code": "6318",
+            "tgt_auth": "NSRS", "tgt_code": "NATRF2022_2D",
+        },
+        {
+            "id": "NAD83_2011_to_NATRF2022_alaska_EPSG",
+            "name": "NAD83(2011) to NATRF2022 Alaska -EPSG-",
+            "in_file": "nad83_2011.natrf2022_2020.alaska",
+            "out_file": 'us_noaa_nadcon5_nad83_2011_natrf2022_2020_alaska.tif',
+            "src_auth": "EPSG", "src_code": "6318",
+            "tgt_auth": "EPSG", "tgt_code": "10968",
+            "omit_alternative": True,
+        },
+        {
+            "id": "NAD83_2011_to_NATRF2022_alaska",
+            "name": "NAD83(2011) to NATRF2022 Alaska",
+            "in_file": "nad83_2011.natrf2022_2020.alaska",
+            "out_file": 'us_noaa_nadcon5_nad83_2011_natrf2022_2020_alaska.tif',
+            "src_auth": "EPSG", "src_code": "6318",
+            "tgt_auth": "NSRS", "tgt_code": "NATRF2022_2D",
+        },
+        {
+            "id": "NAD83_2011_to_PATRF2022_hawaii",
+            "name": "NAD83(PA11) to PATRF2022 Hawaii",
+            "in_file": "nad83_pa11.patrf2022_2020.hawaii",
+            "out_file": 'us_noaa_nadcon5_nad83_pa11_patrf2022_2020_hawaii.tif',
+            "src_auth": "EPSG", "src_code": "6322",
+            "tgt_auth": "NSRS", "tgt_code": "PATRF2022_2D",
+        },
+    ]
+    build_number = '20260731'
+    for d in data:
+        file1 = d["in_file"] + '.lats.trn.' + build_number + '.b'
+        file2 = d["in_file"] + '.lons.trn.' + build_number + '.b'
+        transformation = f"""
+INSERT INTO "grid_transformation" 
+    VALUES('{AUTHORITY}','{d["id"]}','{d["name"]}',
+    'Uses NADCON5 method which expects longitudes positive east in range 0-360°; EPSG source and target CRSs have longitudes positive east in range -180° to +180°.',
+    'EPSG','1075','NADCON5 (3D)',
+    '{d["src_auth"]}','{d["src_code"]}',
+    '{d["tgt_auth"]}','{d["tgt_code"]}',
+    0.05, -- accuracy.
+    'EPSG','8657','Latitude difference file','{file1}',
+    'EPSG','8658','Longitude difference file','{file2}',
+    NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,
+    'NGS-Usa Conus Nadcon5',0);
+"""
+
+        alternative = f"""
+INSERT INTO grid_alternatives VALUES(
+    '{file1}','{d["out_file"]}',NULL,'GTiff','gridshift',0,NULL,
+    'https://jjimenezshaw.github.io/NSRS-2022-PROJ/{d["out_file"]}',1,1,NULL);
+"""
+
+        alt_str = alternative if d.get("omit_alternative", False) else ''
+        str += transformation + usage(d["id"], "grid_transformation") + alt_str
+    return str
+
+
 def dms2deg(dms):
     pattern = r"([0-9]+)\u00b0([0-9]+)'([.0-9]*).*([NSEW])"
     m = re.match(pattern, dms)
@@ -413,6 +488,7 @@ str += create_geodetic_crss()
 str += create_vertical_datum()
 str += create_vertical_crss()
 str += create_vertical_transformations()
+str += create_nadcon_transformations()
 str += create_spcss()
 str += create_itrf2020_transformations()
 
